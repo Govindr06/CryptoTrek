@@ -1,0 +1,254 @@
+{
+  "Comment": "AWS Step Functions Saga Orchestrator for Cryptocurrency Travel Itinerary Platform with Automated Rollback",
+  "StartAt": "ReserveHotelTask",
+  "States": {
+    "ReserveHotelTask": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "Parameters": {
+        "FunctionName": "${ReserveHotelLambdaArn}",
+        "Payload": {
+          "bookingId.$": "$.bookingId",
+          "userId.$": "$.userId",
+          "hotelId.$": "$.itinerary.hotelId",
+          "checkIn.$": "$.itinerary.checkIn",
+          "checkOut.$": "$.itinerary.checkOut",
+          "guests.$": "$.itinerary.guests",
+          "hotelRateEth.$": "$.itinerary.hotelRateEth"
+        }
+      },
+      "ResultSelector": {
+        "hotelReservationId.$": "$.Payload.reservationId",
+        "hotelStatus.$": "$.Payload.status",
+        "hotelHoldExpiresAt.$": "$.Payload.expiresAt"
+      },
+      "ResultPath": "$.hotelResult",
+      "Catch": [
+        {
+          "ErrorEquals": ["States.ALL"],
+          "ResultPath": "$.error",
+          "Next": "HotelReservationFailed"
+        }
+      ],
+      "Next": "BookCabTask"
+    },
+
+    "BookCabTask": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "Parameters": {
+        "FunctionName": "${BookCabLambdaArn}",
+        "Payload": {
+          "bookingId.$": "$.bookingId",
+          "userId.$": "$.userId",
+          "cabId.$": "$.itinerary.cabId",
+          "pickupLocation.$": "$.itinerary.pickupLocation",
+          "dropoffLocation.$": "$.itinerary.dropoffLocation",
+          "pickupTime.$": "$.itinerary.pickupTime",
+          "cabRateEth.$": "$.itinerary.cabRateEth"
+        }
+      },
+      "ResultSelector": {
+        "cabBookingId.$": "$.Payload.cabBookingId",
+        "cabStatus.$": "$.Payload.status"
+      },
+      "ResultPath": "$.cabResult",
+      "Catch": [
+        {
+          "ErrorEquals": ["States.ALL"],
+          "ResultPath": "$.error",
+          "Next": "CompensateHotelReservation"
+        }
+      ],
+      "Next": "CalculateExtraFeesTask"
+    },
+
+    "CalculateExtraFeesTask": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "Parameters": {
+        "FunctionName": "${CalculateFeesLambdaArn}",
+        "Payload": {
+          "bookingId.$": "$.bookingId",
+          "hotelRateEth.$": "$.itinerary.hotelRateEth",
+          "cabRateEth.$": "$.itinerary.cabRateEth",
+          "currency": "ETH",
+          "network": "Ethereum Sepolia"
+        }
+      },
+      "ResultSelector": {
+        "platformFeeEth.$": "$.Payload.platformFeeEth",
+        "estimatedGasWei.$": "$.Payload.estimatedGasWei",
+        "totalAmountEth.$": "$.Payload.totalAmountEth"
+      },
+      "ResultPath": "$.feeResult",
+      "Catch": [
+        {
+          "ErrorEquals": ["States.ALL"],
+          "ResultPath": "$.error",
+          "Next": "CompensateCabAndHotel"
+        }
+      ],
+      "Next": "VerifyCryptoPaymentTask"
+    },
+
+    "VerifyCryptoPaymentTask": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "Parameters": {
+        "FunctionName": "${VerifyCryptoPaymentLambdaArn}",
+        "Payload": {
+          "bookingId.$": "$.bookingId",
+          "userId.$": "$.userId",
+          "txHash.$": "$.payment.txHash",
+          "expectedAmountEth.$": "$.feeResult.totalAmountEth",
+          "walletAddress.$": "$.payment.walletAddress",
+          "escrowContractAddress.$": "$.payment.escrowContractAddress"
+        }
+      },
+      "ResultSelector": {
+        "verified.$": "$.Payload.verified",
+        "blockNumber.$": "$.Payload.blockNumber",
+        "kmsSignature.$": "$.Payload.kmsSignature",
+        "receiptTimestamp.$": "$.Payload.timestamp"
+      },
+      "ResultPath": "$.paymentResult",
+      "Retry": [
+        {
+          "ErrorEquals": ["PaymentPendingException"],
+          "IntervalSeconds": 5,
+          "MaxAttempts": 4,
+          "BackoffRate": 1.5
+        }
+      ],
+      "Catch": [
+        {
+          "ErrorEquals": ["States.ALL"],
+          "ResultPath": "$.paymentError",
+          "Next": "SagaPaymentFailedRollback"
+        }
+      ],
+      "Next": "ConfirmBookingInRdsTask"
+    },
+
+    "ConfirmBookingInRdsTask": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "Parameters": {
+        "FunctionName": "${ConfirmBookingLambdaArn}",
+        "Payload": {
+          "bookingId.$": "$.bookingId",
+          "userId.$": "$.userId",
+          "hotelReservationId.$": "$.hotelResult.hotelReservationId",
+          "cabBookingId.$": "$.cabResult.cabBookingId",
+          "txHash.$": "$.payment.txHash",
+          "totalAmountEth.$": "$.feeResult.totalAmountEth",
+          "kmsSignature.$": "$.paymentResult.kmsSignature"
+        }
+      },
+      "ResultPath": "$.confirmResult",
+      "Next": "GenerateInvoiceToS3Task"
+    },
+
+    "GenerateInvoiceToS3Task": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "Parameters": {
+        "FunctionName": "${GenerateInvoiceLambdaArn}",
+        "Payload": {
+          "bookingId.$": "$.bookingId",
+          "userId.$": "$.userId",
+          "itinerary.$": "$.itinerary",
+          "fees.$": "$.feeResult",
+          "payment.$": "$.paymentResult",
+          "txHash.$": "$.payment.txHash"
+        }
+      },
+      "ResultSelector": {
+        "invoiceS3Key.$": "$.Payload.s3Key",
+        "invoiceUrl.$": "$.Payload.presignedUrl",
+        "issuedAt.$": "$.Payload.issuedAt"
+      },
+      "ResultPath": "$.invoiceResult",
+      "Next": "BookingSuccessNotification"
+    },
+
+    "BookingSuccessNotification": {
+      "Type": "Pass",
+      "Parameters": {
+        "status": "COMPLETED",
+        "bookingId.$": "$.bookingId",
+        "invoiceUrl.$": "$.invoiceResult.invoiceUrl",
+        "txHash.$": "$.payment.txHash"
+      },
+      "End": true
+    },
+
+    "SagaPaymentFailedRollback": {
+      "Type": "Pass",
+      "Comment": "Payment failed or timed out on Sepolia blockchain. Initiating automated Saga rollback.",
+      "Next": "CompensateCabBooking"
+    },
+
+    "CompensateCabAndHotel": {
+      "Type": "Pass",
+      "Next": "CompensateCabBooking"
+    },
+
+    "CompensateCabBooking": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "Parameters": {
+        "FunctionName": "${CancelCabLambdaArn}",
+        "Payload": {
+          "bookingId.$": "$.bookingId",
+          "cabBookingId.$": "$.cabResult.cabBookingId",
+          "reason": "Saga Rollback Triggered: Payment verification failed"
+        }
+      },
+      "ResultPath": "$.cabCompensated",
+      "Next": "CompensateHotelReservation"
+    },
+
+    "CompensateHotelReservation": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "Parameters": {
+        "FunctionName": "${CancelHotelLambdaArn}",
+        "Payload": {
+          "bookingId.$": "$.bookingId",
+          "hotelReservationId.$": "$.hotelResult.hotelReservationId",
+          "reason": "Saga Rollback Triggered: Upstream failure in travel workflow"
+        }
+      },
+      "ResultPath": "$.hotelCompensated",
+      "Next": "CompensateSmartContractRefund"
+    },
+
+    "CompensateSmartContractRefund": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "Parameters": {
+        "FunctionName": "${RefundCryptoLambdaArn}",
+        "Payload": {
+          "bookingId.$": "$.bookingId",
+          "reason": "Automated refund triggered by AWS Step Functions Saga Rollback"
+        }
+      },
+      "ResultPath": "$.cryptoRefundResult",
+      "Next": "SagaExecutionFailed"
+    },
+
+    "HotelReservationFailed": {
+      "Type": "Fail",
+      "Cause": "Hotel Reservation Task Failed",
+      "Error": "HotelReservationError"
+    },
+
+    "SagaExecutionFailed": {
+      "Type": "Fail",
+      "Cause": "Saga transaction failed and all compensating rollback operations completed successfully",
+      "Error": "SagaRollbackComplete"
+    }
+  }
+}

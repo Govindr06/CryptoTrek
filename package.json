@@ -1,0 +1,33 @@
+{
+  "name": "cryptovoyage-cloud-platform",
+  "version": "1.0.0",
+  "description": "Enterprise Cryptocurrency Travel Itinerary Platform on AWS Serverless & Ethereum Sepolia",
+  "scripts": {
+    "install:all": "npm install && (cd backend && npm install) && (cd frontend && npm install)",
+    "server": "node backend/local-dev-server.js",
+    "client": "cd frontend && npm run dev",
+    "dev": "node scripts/start-dev.js",
+    "build": "cd frontend && npm run build"
+  },
+  "keywords": [
+    "aws",
+    "route53",
+    "cloudfront",
+    "cognito",
+    "api-gateway",
+    "lambda",
+    "step-functions",
+    "saga-pattern",
+    "rds-postgres",
+    "dynamodb",
+    "elasticache-redis",
+    "ec2",
+    "ethereum-sepolia",
+    "metamask",
+    "kms",
+    "s3",
+    "cloudwatch"
+  ],
+  "author": "Cloud Computing Team",
+  "license": "MIT"
+}

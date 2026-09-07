@@ -1,0 +1,13 @@
+{
+  "name": "crypto-voyage-backend",
+  "version": "1.0.0",
+  "description": "Serverless backend, Step Functions Saga orchestrator, and Web3 crypto payment verifier",
+  "main": "local-dev-server.js",
+  "scripts": {
+    "start": "node local-dev-server.js"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.19.2"
+  }
+}

@@ -1,0 +1,54 @@
+# Amazon Cognito User Pool for Registration & Authentication
+resource "aws_cognito_user_pool" "pool" {
+  name = "${var.project_name}-user-pool"
+
+  username_attributes      = ["email"]
+  auto_verified_attributes = ["email"]
+
+  password_policy {
+    minimum_length    = 8
+    require_lowercase = true
+    require_numbers   = true
+    require_symbols   = true
+    require_uppercase = true
+  }
+
+  schema {
+    attribute_data_type      = "String"
+    developer_only_attribute = false
+    mutable                  = true
+    name                     = "wallet_address"
+    required                 = false
+    string_attribute_constraints {
+      min_length = "42"
+      max_length = "42"
+    }
+  }
+
+  account_recovery_setting {
+    recovery_mechanism {
+      name     = "verified_email"
+      priority = 1
+    }
+  }
+
+  tags = {
+    Name = "${var.project_name}-cognito-user-pool"
+  }
+}
+
+# Amazon Cognito User Pool Client
+resource "aws_cognito_user_pool_client" "client" {
+  name         = "${var.project_name}-app-client"
+  user_pool_id = aws_cognito_user_pool.pool.id
+
+  generate_secret                      = false
+  explicit_auth_flows                  = ["ALLOW_USER_PASSWORD_AUTH", "ALLOW_REFRESH_TOKEN_AUTH", "ALLOW_USER_SRP_AUTH"]
+  prevent_user_existence_errors        = "ENABLED"
+  enable_token_revocation              = true
+  allowed_oauth_flows_user_pool_client = true
+  allowed_oauth_flows                  = ["code", "implicit"]
+  allowed_oauth_scopes                 = ["email", "openid", "profile"]
+  callback_urls                        = ["https://app.${var.domain_name}/auth/callback", "http://localhost:5173/auth/callback"]
+  logout_urls                          = ["https://app.${var.domain_name}/", "http://localhost:5173/"]
+}

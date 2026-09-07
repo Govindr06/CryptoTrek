@@ -1,0 +1,143 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: >
+  CryptoVoyage: Enterprise Cryptocurrency Travel Itinerary Platform Architecture
+  Demonstrating Route 53, CloudFront, Cognito, API Gateway, Lambda, Step Functions (Saga),
+  DynamoDB, RDS PostgreSQL, ElastiCache Redis, KMS, EC2 Blockchain Node, S3, and CloudWatch.
+
+Parameters:
+  EnvironmentName:
+    Type: String
+    Default: prod
+    Description: Environment stage (dev, test, prod)
+  DBMasterPassword:
+    Type: String
+    NoEcho: true
+    Description: Master password for RDS PostgreSQL Database
+    Default: CryptoVoyageSecret2026!
+
+Resources:
+  # =========================================================================
+  # 1. AWS KMS & Payment Cryptography Key
+  # =========================================================================
+  PaymentCryptoKMSKey:
+    Type: AWS::KMS::Key
+    Properties:
+      Description: KMS Customer Managed Key for payment tokens and wallet cryptography
+      EnableKeyRotation: true
+      KeyPolicy:
+        Version: '2012-10-17'
+        Statement:
+          - Sid: EnableRootAccess
+            Effect: Allow
+            Principal:
+              AWS: !Sub 'arn:aws:iam::${AWS::AccountId}:root'
+            Action: 'kms:*'
+            Resource: '*'
+
+  # =========================================================================
+  # 2. Amazon Cognito User Pool & Client
+  # =========================================================================
+  CognitoUserPool:
+    Type: AWS::Cognito::UserPool
+    Properties:
+      UserPoolName: !Sub 'cryptovoyage-users-${EnvironmentName}'
+      UsernameAttributes:
+        - email
+      AutoVerifiedAttributes:
+        - email
+      Policies:
+        PasswordPolicy:
+          MinimumLength: 8
+          RequireLowercase: true
+          RequireNumbers: true
+          RequireSymbols: true
+          RequireUppercase: true
+
+  CognitoUserPoolClient:
+    Type: AWS::Cognito::UserPoolClient
+    Properties:
+      ClientName: cryptovoyage-web-client
+      UserPoolId: !Ref CognitoUserPool
+      GenerateSecret: false
+      ExplicitAuthFlows:
+        - ALLOW_USER_PASSWORD_AUTH
+        - ALLOW_REFRESH_TOKEN_AUTH
+
+  # =========================================================================
+  # 3. Amazon DynamoDB Cart & Session Table
+  # =========================================================================
+  DynamoDBCartsTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub 'cryptovoyage-carts-${EnvironmentName}'
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: userId
+          AttributeType: S
+      KeySchema:
+        - AttributeName: userId
+          KeyType: HASH
+      TimeToLiveSpecification:
+        AttributeName: ttl
+        Enabled: true
+
+  # =========================================================================
+  # 4. Amazon S3 Buckets: Web Hosting & Invoices
+  # =========================================================================
+  FrontendHostingBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub 'cryptovoyage-web-${AWS::AccountId}-${EnvironmentName}'
+      WebsiteConfiguration:
+        IndexDocument: index.html
+        ErrorDocument: index.html
+
+  InvoicesBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub 'cryptovoyage-invoices-${AWS::AccountId}-${EnvironmentName}'
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: 'aws:kms'
+              KMSMasterKeyId: !GetAtt PaymentCryptoKMSKey.Arn
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+
+  # =========================================================================
+  # 5. Amazon CloudWatch Logs & Alarms
+  # =========================================================================
+  SagaExecutionLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub '/aws/vendedlogs/states/cryptovoyage-saga-${EnvironmentName}'
+      RetentionInDays: 30
+
+  PaymentFailureAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: CryptoVoyage-PaymentVerificationFailures
+      MetricName: FailedBookings
+      Namespace: CryptoVoyage/Platform
+      Statistic: Sum
+      Period: 300
+      EvaluationPeriods: 1
+      Threshold: 3
+      ComparisonOperator: GreaterThanThreshold
+
+Outputs:
+  CognitoUserPoolId:
+    Value: !Ref CognitoUserPool
+    Description: Amazon Cognito User Pool ID
+  DynamoDBTableName:
+    Value: !Ref DynamoDBCartsTable
+    Description: DynamoDB Table for ephemeral cart management
+  InvoicesBucketName:
+    Value: !Ref InvoicesBucket
+    Description: Secure S3 bucket for storing customer invoices
+  KmsKeyArn:
+    Value: !GetAtt PaymentCryptoKMSKey.Arn
+    Description: KMS Key ARN for digital wallet and payment security
