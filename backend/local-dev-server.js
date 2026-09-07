@@ -221,7 +221,7 @@ app.post("/api/saga/execute-booking", async (req, res) => {
       txHash: (payment && payment.txHash) || `0x${require("crypto").randomBytes(32).toString("hex")}`,
       expectedAmountEth: feeResult.totalAmountEth,
       walletAddress: (payment && payment.walletAddress) || "0xTravelerMetaMask",
-      escrowContractAddress: "0x35B9A4753F81c4DeA96bDeFF3A44FDe5E6D4B752"
+      escrowContractAddress: "0x35b9A4753f81c4DEa96bdeff3a44fdE5E6D4b752"
     });
     addStep("VerifyCryptoPaymentTask", "SUCCESS", `Payment confirmed on Sepolia Block #${paymentResult.blockNumber}. Signed with AWS KMS.`);
     logCloudWatch("AWS Lambda [VerifyCryptoPayment]", `Verified Sepolia tx: ${paymentResult.txHash} with KMS Key`);

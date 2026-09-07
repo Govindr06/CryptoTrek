@@ -1,9 +1,9 @@
-import { BrowserProvider, parseEther, formatEther, hexlify, toUtf8Bytes } from 'ethers';
+import { BrowserProvider, parseEther, formatEther, hexlify, toUtf8Bytes, getAddress } from 'ethers';
 
 export const SEPOLIA_CHAIN_ID = 11155111;
 export const SEPOLIA_HEX = '0xaa36a7';
-// Sepolia test escrow / merchant deposit recipient
-export const ESCROW_CONTRACT_ADDRESS = "0x35B9A4753F81c4DeA96bDeFF3A44FDe5E6D4B752";
+// Sepolia test escrow / merchant deposit recipient (Normalized EIP-55 checksum)
+export const ESCROW_CONTRACT_ADDRESS = getAddress("0x35b9a4753f81c4dea96bdeff3a44fde5e6d4b752");
 
 export const FAUCETS = [
   { name: "Google Cloud Web3 Sepolia Faucet", url: "https://cloud.google.com/application/web3/faucet/ethereum/sepolia" },
