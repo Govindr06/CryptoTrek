@@ -39,7 +39,17 @@ resource "aws_sfn_state_machine" "booking_saga" {
   name     = "${var.project_name}-booking-saga"
   role_arn = aws_iam_role.step_functions_role.arn
 
-  definition = file("${path.module}/../../backend/state-machine/booking-saga.asl.json")
+  definition = templatefile("${path.module}/../../backend/state-machine/booking-saga.asl.json", {
+    ReserveHotelLambdaArn        = aws_lambda_function.reserve_hotel.arn
+    BookCabLambdaArn             = aws_lambda_function.book_cab.arn
+    CalculateFeesLambdaArn       = aws_lambda_function.calculate_fees.arn
+    VerifyCryptoPaymentLambdaArn = aws_lambda_function.verify_crypto_payment.arn
+    ConfirmBookingLambdaArn      = aws_lambda_function.confirm_booking.arn
+    GenerateInvoiceLambdaArn     = aws_lambda_function.generate_invoice.arn
+    CancelCabLambdaArn           = aws_lambda_function.cancel_cab.arn
+    CancelHotelLambdaArn         = aws_lambda_function.cancel_hotel.arn
+    RefundCryptoLambdaArn        = aws_lambda_function.refund_crypto.arn
+  })
 
   logging_configuration {
     log_destination        = "${aws_cloudwatch_log_group.step_functions_logs.arn}:*"
