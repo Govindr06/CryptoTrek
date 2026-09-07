@@ -3,7 +3,7 @@ import { ShoppingBag, Trash2, ArrowRight, Clock, ShieldCheck, Database } from 'l
 
 export default function CartView({ cart, onRemoveItem, onCheckout, onClearCart }) {
   const items = cart?.items || [];
-  const totalEth = items.reduce((acc, item) => acc + parseFloat(item.totalAmountEth || 0), 0).toFixed(4);
+  const totalEth = items.reduce((acc, item) => acc + parseFloat(item.totalAmountEth || 0), 0).toFixed(5);
 
   return (
     <div style={{ maxWidth: '1000px', margin: '0 auto', padding: '30px 20px' }}>
@@ -49,19 +49,19 @@ export default function CartView({ cart, onRemoveItem, onCheckout, onClearCart }
                     <span style={{ fontSize: '0.75rem', color: '#ff9900', fontWeight: 600 }}>DESTINATION</span>
                     <h3 style={{ fontSize: '1.15rem', fontWeight: 700 }}>{item.destination}</h3>
                     <div style={{ fontSize: '0.85rem', color: '#9ca3af', marginTop: '4px' }}>
-                      🏨 {item.hotelName} ({item.hotelRateEth} ETH)
+                      🏨 {item.hotelName} ({parseFloat(item.hotelRateEth).toFixed(5)} ETH)
                     </div>
                     <div style={{ fontSize: '0.85rem', color: '#9ca3af', marginTop: '2px' }}>
-                      🚖 {item.cabName} ({item.cabRateEth} ETH)
+                      🚖 {item.cabName} ({parseFloat(item.cabRateEth).toFixed(5)} ETH)
                     </div>
-                    <div style={{ fontSize: '0.8rem', color: '#6b7280', marginTop: '6px' }}>
-                      Dates: {item.checkIn} → {item.checkOut} ({item.guests} Guests)
+                    <div style={{ fontSize: '0.82rem', color: '#c7d2fe', marginTop: '6px', background: 'rgba(99, 102, 241, 0.1)', padding: '4px 8px', borderRadius: '6px', width: 'fit-content' }}>
+                      📅 In: <strong>{item.checkIn}</strong> • Out: <strong>{item.checkOut}</strong> ({item.nights || 1} Night{item.nights > 1 ? 's' : ''}, {item.guests} Guests)
                     </div>
                   </div>
 
                   <div style={{ textAlign: 'right' }}>
                     <div style={{ fontSize: '1.2rem', fontWeight: 800, color: '#818cf8', fontFamily: 'var(--font-mono)' }}>
-                      {item.totalAmountEth} ETH
+                      {parseFloat(item.totalAmountEth).toFixed(5)} ETH
                     </div>
                     <button 
                       onClick={() => onRemoveItem(idx)}

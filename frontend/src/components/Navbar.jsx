@@ -1,5 +1,5 @@
 import React from 'react';
-import { Plane, Compass, ShoppingBag, FileText, Cpu, User, ShieldCheck } from 'lucide-react';
+import { Plane, Compass, ShoppingBag, FileText, User, ShieldCheck } from 'lucide-react';
 import MetaMaskConnect from './MetaMaskConnect';
 
 export default function Navbar({ activeTab, setActiveTab, wallet, setWallet, user, onOpenAuth, cartItemCount }) {
@@ -77,14 +77,6 @@ export default function Navbar({ activeTab, setActiveTab, wallet, setWallet, use
             style={{ padding: '8px 14px', fontSize: '0.88rem' }}
           >
             <FileText size={16} /> S3 Invoices
-          </button>
-
-          <button 
-            onClick={() => setActiveTab('architecture')}
-            className={activeTab === 'architecture' ? 'btn-primary' : 'btn-secondary'}
-            style={{ padding: '8px 14px', fontSize: '0.88rem', borderColor: '#ff9900' }}
-          >
-            <Cpu size={16} color="#ff9900" /> Architecture & Marks
           </button>
         </div>
 

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { MapPin, Hotel, Car, Calendar, Users, Zap, Check, ArrowRight, Database } from 'lucide-react';
+import { MapPin, Hotel, Car, Calendar, Users, Zap, Check, ArrowRight, Database, Moon } from 'lucide-react';
 
 export default function ItineraryBuilder({ onAddToCart, onInitiateCheckout }) {
   const [destinations, setDestinations] = useState([]);
@@ -7,7 +7,7 @@ export default function ItineraryBuilder({ onAddToCart, onInitiateCheckout }) {
   const [selectedHotel, setSelectedHotel] = useState(null);
   const [selectedCab, setSelectedCab] = useState(null);
   const [checkIn, setCheckIn] = useState('2026-10-15');
-  const [checkOut, setCheckOut] = useState('2026-10-20');
+  const [checkOut, setCheckOut] = useState('2026-10-18');
   const [guests, setGuests] = useState(2);
   const [loading, setLoading] = useState(true);
   const [cacheSource, setCacheSource] = useState('ElastiCache Redis');
@@ -40,30 +40,46 @@ export default function ItineraryBuilder({ onAddToCart, onInitiateCheckout }) {
     setSelectedCab(dest.cabs[0]);
   };
 
-  // Calculate pricing
-  const hotelPrice = selectedHotel ? parseFloat(selectedHotel.priceEth) : 0;
-  const cabPrice = selectedCab ? parseFloat(selectedCab.priceEth) : 0;
-  const subtotal = hotelPrice + cabPrice;
-  const platformFee = (subtotal * 0.025).toFixed(4);
-  const totalEth = (subtotal + parseFloat(platformFee)).toFixed(4);
-  const totalUsd = selectedHotel && selectedCab ? (selectedHotel.priceUsd + selectedCab.priceUsd) : 0;
+  // Calculate length of stay (nights)
+  const dIn = new Date(checkIn);
+  const dOut = new Date(checkOut);
+  const diffTime = dOut.getTime() - dIn.getTime();
+  const calculatedNights = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+  const nights = calculatedNights > 0 ? calculatedNights : 1;
+
+  // Calculate pricing with extreme low amounts in 5 decimal places
+  const hotelRatePerNight = selectedHotel ? parseFloat(selectedHotel.priceEth) : 0.00025;
+  const hotelTotalEth = (hotelRatePerNight * nights).toFixed(5);
+  const hotelTotalUsd = selectedHotel ? (selectedHotel.priceUsd * nights).toFixed(2) : '0.00';
+
+  const cabRateEth = selectedCab ? parseFloat(selectedCab.priceEth) : 0.00005;
+  const cabTotalEth = cabRateEth.toFixed(5);
+  const cabTotalUsd = selectedCab ? selectedCab.priceUsd.toFixed(2) : '0.00';
+
+  const subtotalEth = (parseFloat(hotelTotalEth) + parseFloat(cabTotalEth)).toFixed(5);
+  const platformFeeEth = (parseFloat(subtotalEth) * 0.025).toFixed(5);
+  const totalEth = (parseFloat(subtotalEth) + parseFloat(platformFeeEth)).toFixed(5);
+  const totalUsd = (parseFloat(hotelTotalUsd) + parseFloat(cabTotalUsd)).toFixed(2);
 
   const currentItinerary = {
     destination: selectedDest ? selectedDest.city : '',
     hotelId: selectedHotel ? selectedHotel.id : '',
     hotelName: selectedHotel ? selectedHotel.name : '',
-    hotelRateEth: selectedHotel ? selectedHotel.priceEth : '0',
-    hotelRateUsd: selectedHotel ? selectedHotel.priceUsd : 0,
+    hotelRateEth: hotelTotalEth,
+    hotelRatePerNight: hotelRatePerNight.toFixed(5),
+    hotelRateUsd: hotelTotalUsd,
     cabId: selectedCab ? selectedCab.id : '',
     cabName: selectedCab ? selectedCab.model : '',
-    cabRateEth: selectedCab ? selectedCab.priceEth : '0',
-    cabRateUsd: selectedCab ? selectedCab.priceUsd : 0,
+    cabRateEth: cabTotalEth,
+    cabRateUsd: cabTotalUsd,
     checkIn,
     checkOut,
+    nights,
     guests,
     pickupLocation: 'Airport International Terminal',
     dropoffLocation: selectedHotel ? selectedHotel.name : 'Destination Hotel',
     pickupTime: `${checkIn} 14:00:00`,
+    platformFeeEth,
     totalAmountEth: totalEth,
     totalAmountUsd: totalUsd
   };
@@ -88,7 +104,7 @@ export default function ItineraryBuilder({ onAddToCart, onInitiateCheckout }) {
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
               <span className="badge badge-sepolia">Web3 Crypto Escrow</span>
-              <span className="badge badge-aws">AWS Step Functions Saga</span>
+              <span className="badge badge-aws">AWS Serverless Platform</span>
               <span className="badge badge-success">
                 <Database size={12} /> {cacheSource} (0.8ms latency)
               </span>
@@ -97,16 +113,16 @@ export default function ItineraryBuilder({ onAddToCart, onInitiateCheckout }) {
               Design Your Crypto Travel Itinerary
             </h1>
             <p style={{ color: 'var(--text-secondary)', maxWidth: '680px', fontSize: '0.98rem' }}>
-              Book luxury hotels and VIP airport cabs globally using <strong>Ethereum Sepolia Testnet</strong>. 
-              Orchestrated with automated rollbacks on AWS Step Functions to protect your digital assets.
+              Book luxury hotels and VIP airport cabs with ultra-low micro-rates on the <strong>Ethereum Sepolia Testnet</strong>. 
+              Orchestrated with automated rollbacks on AWS Step Functions.
             </p>
           </div>
 
-          {/* Quick Stats Pill */}
+          {/* Micro-rates conversion pill */}
           <div className="glass-panel" style={{ padding: '14px 20px', background: 'rgba(255, 255, 255, 0.03)', textAlign: 'right' }}>
-            <span style={{ fontSize: '0.75rem', color: '#9ca3af', textTransform: 'uppercase' }}>Live Conversion Rate</span>
-            <div style={{ fontSize: '1.2rem', fontWeight: 700, color: '#34d399', fontFamily: 'var(--font-mono)' }}>1 ETH ≈ $3,420 USD</div>
-            <span style={{ fontSize: '0.7rem', color: '#ff9900' }}>Cached in ElastiCache Redis</span>
+            <span style={{ fontSize: '0.75rem', color: '#9ca3af', textTransform: 'uppercase' }}>Micro-Rate Pricing</span>
+            <div style={{ fontSize: '1.15rem', fontWeight: 700, color: '#34d399', fontFamily: 'var(--font-mono)' }}>5 Decimal Places</div>
+            <span style={{ fontSize: '0.7rem', color: '#818cf8' }}>Testnet Faucet Friendly</span>
           </div>
         </div>
       </div>
@@ -149,6 +165,7 @@ export default function ItineraryBuilder({ onAddToCart, onInitiateCheckout }) {
           <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
             {selectedDest?.hotels.map(h => {
               const isSelected = selectedHotel?.id === h.id;
+              const rateFormatted = parseFloat(h.priceEth).toFixed(5);
               return (
                 <div
                   key={h.id}
@@ -171,8 +188,10 @@ export default function ItineraryBuilder({ onAddToCart, onInitiateCheckout }) {
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '8px' }}>
                         <span style={{ fontSize: '0.75rem', color: '#10b981' }}>{h.roomsAvailable} rooms left</span>
                         <div style={{ textAlign: 'right' }}>
-                          <span style={{ fontWeight: 700, color: '#c7d2fe', fontFamily: 'var(--font-mono)' }}>{h.priceEth} ETH</span>
-                          <span style={{ fontSize: '0.75rem', color: '#9ca3af', display: 'block' }}>(${h.priceUsd})</span>
+                          <span style={{ fontWeight: 700, color: '#c7d2fe', fontFamily: 'var(--font-mono)', fontSize: '0.95rem' }}>
+                            {rateFormatted} ETH
+                          </span>
+                          <span style={{ fontSize: '0.72rem', color: '#9ca3af', display: 'block' }}>/ night (${h.priceUsd})</span>
                         </div>
                       </div>
                     </div>
@@ -182,19 +201,42 @@ export default function ItineraryBuilder({ onAddToCart, onInitiateCheckout }) {
             })}
           </div>
 
-          {/* Dates & Guests */}
-          <div style={{ marginTop: '20px', paddingTop: '16px', borderTop: '1px solid var(--border-color)', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-            <div>
-              <label style={{ fontSize: '0.75rem', color: '#9ca3af', display: 'flex', alignItems: 'center', gap: '4px', marginBottom: '4px' }}>
-                <Calendar size={12} /> Check-In
-              </label>
-              <input 
-                type="date" 
-                value={checkIn} 
-                onChange={e => setCheckIn(e.target.value)} 
-                style={{ width: '100%', padding: '8px', borderRadius: '8px', background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border-color)', color: '#fff', fontSize: '0.8rem' }}
-              />
+          {/* Dates & Guests with Checkout Date */}
+          <div style={{ marginTop: '20px', paddingTop: '16px', borderTop: '1px solid var(--border-color)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+              <span style={{ fontSize: '0.8rem', fontWeight: 600, color: '#c7d2fe' }}>Stay Duration</span>
+              <span className="badge badge-sepolia" style={{ fontSize: '0.7rem' }}>
+                <Moon size={11} /> {nights} {nights === 1 ? 'Night' : 'Nights'}
+              </span>
             </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '10px' }}>
+              <div>
+                <label style={{ fontSize: '0.75rem', color: '#9ca3af', display: 'flex', alignItems: 'center', gap: '4px', marginBottom: '4px' }}>
+                  <Calendar size={12} /> Check-In Date
+                </label>
+                <input 
+                  type="date" 
+                  value={checkIn} 
+                  onChange={e => setCheckIn(e.target.value)} 
+                  style={{ width: '100%', padding: '8px', borderRadius: '8px', background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border-color)', color: '#fff', fontSize: '0.8rem' }}
+                />
+              </div>
+
+              <div>
+                <label style={{ fontSize: '0.75rem', color: '#9ca3af', display: 'flex', alignItems: 'center', gap: '4px', marginBottom: '4px' }}>
+                  <Calendar size={12} color="#6366f1" /> Check-Out Date
+                </label>
+                <input 
+                  type="date" 
+                  value={checkOut} 
+                  min={checkIn}
+                  onChange={e => setCheckOut(e.target.value)} 
+                  style={{ width: '100%', padding: '8px', borderRadius: '8px', background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border-active)', color: '#fff', fontSize: '0.8rem' }}
+                />
+              </div>
+            </div>
+
             <div>
               <label style={{ fontSize: '0.75rem', color: '#9ca3af', display: 'flex', alignItems: 'center', gap: '4px', marginBottom: '4px' }}>
                 <Users size={12} /> Guests
@@ -227,6 +269,7 @@ export default function ItineraryBuilder({ onAddToCart, onInitiateCheckout }) {
           <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
             {selectedDest?.cabs.map(c => {
               const isSelected = selectedCab?.id === c.id;
+              const cabPriceFormatted = parseFloat(c.priceEth).toFixed(5);
               return (
                 <div
                   key={c.id}
@@ -245,10 +288,12 @@ export default function ItineraryBuilder({ onAddToCart, onInitiateCheckout }) {
                   </div>
 
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '12px', paddingTop: '10px', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
-                    <span style={{ fontSize: '0.75rem', color: '#818cf8' }}>Fixed-rate airport transfer</span>
+                    <span style={{ fontSize: '0.75rem', color: '#818cf8' }}>Fixed-rate transfer</span>
                     <div style={{ textAlign: 'right' }}>
-                      <span style={{ fontWeight: 700, color: '#c7d2fe', fontFamily: 'var(--font-mono)' }}>{c.priceEth} ETH</span>
-                      <span style={{ fontSize: '0.75rem', color: '#9ca3af', display: 'block' }}>(${c.priceUsd})</span>
+                      <span style={{ fontWeight: 700, color: '#c7d2fe', fontFamily: 'var(--font-mono)', fontSize: '0.95rem' }}>
+                        {cabPriceFormatted} ETH
+                      </span>
+                      <span style={{ fontSize: '0.72rem', color: '#9ca3af', display: 'block' }}>(${c.priceUsd})</span>
                     </div>
                   </div>
                 </div>
@@ -258,7 +303,8 @@ export default function ItineraryBuilder({ onAddToCart, onInitiateCheckout }) {
 
           <div style={{ marginTop: '20px', padding: '14px', borderRadius: '10px', background: 'rgba(255,255,255,0.02)', border: '1px solid var(--border-color)', fontSize: '0.8rem', color: '#9ca3af' }}>
             ✈️ <strong>Pickup:</strong> Airport Arrivals Terminal <br />
-            🏨 <strong>Dropoff:</strong> {selectedHotel ? selectedHotel.name : 'Hotel'}
+            🏨 <strong>Dropoff:</strong> {selectedHotel ? selectedHotel.name : 'Hotel'} <br />
+            📅 <strong>Schedule:</strong> {checkIn} arrivals transfer
           </div>
         </div>
 
@@ -270,22 +316,31 @@ export default function ItineraryBuilder({ onAddToCart, onInitiateCheckout }) {
               <span className="badge badge-aws">AWS Step Functions</span>
             </div>
 
+            {/* Check-In and Check-Out Dates Summary */}
+            <div style={{ background: 'rgba(99, 102, 241, 0.08)', padding: '10px 14px', borderRadius: '8px', border: '1px solid rgba(99, 102, 241, 0.2)', marginBottom: '14px', fontSize: '0.82rem' }}>
+              <div style={{ color: '#c7d2fe', fontWeight: 600 }}>Stay Schedule:</div>
+              <div style={{ color: '#9ca3af', marginTop: '2px' }}>
+                📅 <strong>Check-In:</strong> {checkIn} <br />
+                🏁 <strong>Check-Out:</strong> {checkOut} ({nights} {nights === 1 ? 'Night' : 'Nights'})
+              </div>
+            </div>
+
             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', fontSize: '0.88rem' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', color: '#9ca3af' }}>
-                <span>Hotel ({selectedHotel?.name.substring(0, 18)}...)</span>
-                <span style={{ color: '#fff', fontFamily: 'var(--font-mono)' }}>{hotelPrice} ETH</span>
+                <span>Hotel ({nights} night{nights > 1 ? 's' : ''})</span>
+                <span style={{ color: '#fff', fontFamily: 'var(--font-mono)' }}>{hotelTotalEth} ETH</span>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', color: '#9ca3af' }}>
                 <span>Airport Cab Transfer</span>
-                <span style={{ color: '#fff', fontFamily: 'var(--font-mono)' }}>{cabPrice} ETH</span>
+                <span style={{ color: '#fff', fontFamily: 'var(--font-mono)' }}>{cabTotalEth} ETH</span>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', color: '#9ca3af' }}>
-                <span>Platform Protocol Fee (2.5%)</span>
-                <span style={{ color: '#fff', fontFamily: 'var(--font-mono)' }}>{platformFee} ETH</span>
+                <span>Platform Fee (2.5%)</span>
+                <span style={{ color: '#fff', fontFamily: 'var(--font-mono)' }}>{platformFeeEth} ETH</span>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', color: '#9ca3af' }}>
                 <span>Sepolia Gas Fee (Est.)</span>
-                <span style={{ color: '#10b981', fontFamily: 'var(--font-mono)' }}>~0.0009 ETH</span>
+                <span style={{ color: '#10b981', fontFamily: 'var(--font-mono)' }}>~0.00005 ETH</span>
               </div>
 
               <div style={{ margin: '14px 0', borderTop: '1px dashed var(--border-color)' }}></div>
@@ -296,10 +351,10 @@ export default function ItineraryBuilder({ onAddToCart, onInitiateCheckout }) {
                   <span style={{ display: 'block', fontSize: '0.8rem', color: '#9ca3af' }}>~${totalUsd} USD</span>
                 </div>
                 <div style={{ textAlign: 'right' }}>
-                  <span style={{ fontSize: '1.4rem', fontWeight: 800, color: '#818cf8', fontFamily: 'var(--font-mono)' }}>
+                  <span style={{ fontSize: '1.5rem', fontWeight: 800, color: '#818cf8', fontFamily: 'var(--font-mono)' }}>
                     {totalEth} ETH
                   </span>
-                  <span style={{ display: 'block', fontSize: '0.7rem', color: '#ff9900' }}>Sepolia Network</span>
+                  <span style={{ display: 'block', fontSize: '0.7rem', color: '#34d399' }}>5 Decimal Precision</span>
                 </div>
               </div>
             </div>

@@ -118,12 +118,17 @@ export default function SagaVisualizerModal({ isOpen, onClose, itinerary, wallet
           <div>
             <span style={{ fontSize: '0.75rem', color: '#9ca3af', textTransform: 'uppercase' }}>Selected Travel Package</span>
             <div style={{ fontWeight: 600, fontSize: '0.95rem' }}>{itinerary.destination} • {itinerary.hotelName}</div>
-            <span style={{ fontSize: '0.8rem', color: '#818cf8' }}>Includes {itinerary.cabName} Airport Cab</span>
+            <div style={{ fontSize: '0.8rem', color: '#c7d2fe', marginTop: '2px' }}>
+              📅 In: <strong>{itinerary.checkIn}</strong> • Out: <strong>{itinerary.checkOut}</strong> ({itinerary.nights || 1} Night{itinerary.nights > 1 ? 's' : ''})
+            </div>
+            <span style={{ fontSize: '0.78rem', color: '#818cf8', display: 'block', marginTop: '2px' }}>Includes {itinerary.cabName} Airport Cab</span>
           </div>
           <div style={{ textAlign: 'right' }}>
             <span style={{ fontSize: '0.75rem', color: '#9ca3af', textTransform: 'uppercase' }}>Amount to Verify</span>
-            <div style={{ fontSize: '1.2rem', fontWeight: 800, color: '#34d399', fontFamily: 'var(--font-mono)' }}>{itinerary.totalAmountEth} ETH</div>
-            <span style={{ fontSize: '0.75rem', color: '#ff9900' }}>Ethereum Sepolia</span>
+            <div style={{ fontSize: '1.25rem', fontWeight: 800, color: '#34d399', fontFamily: 'var(--font-mono)' }}>
+              {parseFloat(itinerary.totalAmountEth).toFixed(5)} ETH
+            </div>
+            <span style={{ fontSize: '0.72rem', color: '#ff9900' }}>Ethereum Sepolia</span>
           </div>
         </div>
 
@@ -132,8 +137,8 @@ export default function SagaVisualizerModal({ isOpen, onClose, itinerary, wallet
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
             <AlertTriangle size={20} color="#f87171" />
             <div>
-              <div style={{ fontSize: '0.9rem', fontWeight: 600, color: '#f87171' }}>Test Saga Rollback (Rubric Requirement)</div>
-              <div style={{ fontSize: '0.75rem', color: '#9ca3af' }}>Simulate a reverted crypto transaction on Sepolia to observe automated compensating rollbacks (CancelCab → CancelHotel → Refund).</div>
+              <div style={{ fontSize: '0.9rem', fontWeight: 600, color: '#f87171' }}>Simulate Payment Failure & Saga Rollback</div>
+              <div style={{ fontSize: '0.75rem', color: '#9ca3af' }}>Simulate a reverted crypto transaction on Sepolia to test automated compensating rollbacks (CancelCab → CancelHotel → Refund).</div>
             </div>
           </div>
           <label style={{ position: 'relative', display: 'inline-block', width: '48px', height: '24px' }}>

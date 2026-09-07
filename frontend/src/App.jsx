@@ -3,7 +3,6 @@ import Navbar from './components/Navbar';
 import ItineraryBuilder from './components/ItineraryBuilder';
 import CartView from './components/CartView';
 import InvoicesView from './components/InvoicesView';
-import ArchitectureInspector from './components/ArchitectureInspector';
 import CognitoAuthModal from './components/CognitoAuthModal';
 import SagaVisualizerModal from './components/SagaVisualizerModal';
 import { Web3Service } from './services/web3Service';
@@ -164,10 +163,6 @@ export default function App() {
 
         {activeTab === 'invoices' && (
           <InvoicesView bookings={bookings} />
-        )}
-
-        {activeTab === 'architecture' && (
-          <ArchitectureInspector />
         )}
       </main>
 

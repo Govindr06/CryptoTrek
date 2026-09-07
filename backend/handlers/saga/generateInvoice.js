@@ -20,10 +20,10 @@ exports.handler = async (event) => {
     kmsSignature: payment && payment.kmsSignature,
     itinerary: itinerary || {},
     financials: {
-      hotelFeeEth: itinerary ? itinerary.hotelRateEth : "0.08",
-      cabFeeEth: itinerary ? itinerary.cabRateEth : "0.015",
-      platformFeeEth: fees ? fees.platformFeeEth : "0.002",
-      totalEth: fees ? fees.totalAmountEth : "0.097"
+      hotelFeeEth: itinerary ? parseFloat(itinerary.hotelRateEth).toFixed(5) : "0.00025",
+      cabFeeEth: itinerary ? parseFloat(itinerary.cabRateEth).toFixed(5) : "0.00005",
+      platformFeeEth: fees ? parseFloat(fees.platformFeeEth).toFixed(5) : "0.00001",
+      totalEth: fees ? parseFloat(fees.totalAmountEth).toFixed(5) : "0.00031"
     },
     status: "PAID_VERIFIED",
     s3Location: `s3://${s3Bucket}/${s3Key}`

@@ -43,8 +43,8 @@ export default function InvoicesView({ bookings }) {
                     {b.itinerary?.destination} ({b.itinerary?.hotelName})
                   </h3>
                   <div style={{ display: 'flex', gap: '16px', fontSize: '0.85rem', color: '#9ca3af', marginTop: '6px' }}>
-                    <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                      <Calendar size={14} /> {b.itinerary?.checkIn} to {b.itinerary?.checkOut}
+                    <span style={{ display: 'flex', alignItems: 'center', gap: '4px', color: '#c7d2fe' }}>
+                      <Calendar size={14} color="#6366f1" /> In: <strong>{b.itinerary?.checkIn}</strong> • Out: <strong>{b.itinerary?.checkOut}</strong> ({b.itinerary?.nights || 1} Night{b.itinerary?.nights > 1 ? 's' : ''})
                     </span>
                     <span>•</span>
                     <span>Cab: {b.itinerary?.cabName}</span>
@@ -53,7 +53,7 @@ export default function InvoicesView({ bookings }) {
 
                 <div style={{ textAlign: 'right' }}>
                   <div style={{ fontSize: '1.3rem', fontWeight: 800, color: '#818cf8', fontFamily: 'var(--font-mono)' }}>
-                    {b.itinerary?.totalAmountEth} ETH
+                    {parseFloat(b.itinerary?.totalAmountEth || 0).toFixed(5)} ETH
                   </div>
                   <span style={{ fontSize: '0.8rem', color: '#10b981' }}>Paid via MetaMask Sepolia</span>
                 </div>
