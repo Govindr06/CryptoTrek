@@ -1,7 +1,8 @@
-import { BrowserProvider, parseEther, formatEther, Contract } from 'ethers';
+import { BrowserProvider, parseEther, formatEther, hexlify, toUtf8Bytes } from 'ethers';
 
 export const SEPOLIA_CHAIN_ID = 11155111;
 export const SEPOLIA_HEX = '0xaa36a7';
+// Sepolia test escrow / merchant deposit recipient
 export const ESCROW_CONTRACT_ADDRESS = "0x35B9A4753F81c4DeA96bDeFF3A44FDe5E6D4B752";
 
 export const FAUCETS = [
@@ -32,8 +33,20 @@ export class Web3Service {
       address: accounts[0],
       chainId: Number(network.chainId),
       isSepolia: Number(network.chainId) === SEPOLIA_CHAIN_ID,
-      balanceEth: parseFloat(formatEther(balance)).toFixed(4)
+      balanceEth: parseFloat(formatEther(balance)).toFixed(5)
     };
+  }
+
+  static async getBalance(address) {
+    if (!this.isMetaMaskInstalled() || !address) return "0.00000";
+    try {
+      const provider = new BrowserProvider(window.ethereum);
+      const balance = await provider.getBalance(address);
+      return parseFloat(formatEther(balance)).toFixed(5);
+    } catch (err) {
+      console.error("Failed to fetch balance:", err);
+      return "0.00000";
+    }
   }
 
   static async switchToSepolia() {
@@ -46,7 +59,6 @@ export class Web3Service {
       });
       return true;
     } catch (switchError) {
-      // This error code indicates that the chain has not been added to MetaMask.
       if (switchError.code === 4902) {
         await window.ethereum.request({
           method: 'wallet_addEthereumChain',
@@ -67,12 +79,11 @@ export class Web3Service {
   }
 
   /**
-   * Executes a Sepolia test transaction via MetaMask.
+   * Executes a real Sepolia transaction via MetaMask.
    * Sends payment to either the Escrow contract or merchant deposit address.
    */
   static async sendBookingPayment(amountEth, bookingId) {
     if (!this.isMetaMaskInstalled()) {
-      // Fallback simulated payment for dev/testing when user doesn't have MetaMask extension
       console.warn("MetaMask not available; generating simulated Sepolia transaction hash.");
       return {
         txHash: `0x${Array.from({ length: 64 }, () => Math.floor(Math.random() * 16).toString(16)).join('')}`,
@@ -83,27 +94,38 @@ export class Web3Service {
 
     const provider = new BrowserProvider(window.ethereum);
     const signer = await provider.getSigner();
+    const userAddress = await signer.getAddress();
+    const balance = await provider.getBalance(userAddress);
 
-    console.log(`[MetaMask] Initiating Sepolia transaction for Booking ID: ${bookingId}, Amount: ${amountEth} ETH`);
-
-    try {
-      // For real Sepolia testnet execution:
-      // Send transaction to Escrow address with bookingId attached in data field
-      const tx = await signer.sendTransaction({
-        to: ESCROW_CONTRACT_ADDRESS,
-        value: parseEther(amountEth.toString()),
-        data: `0x${Buffer.from(bookingId).toString('hex')}`
-      });
-
-      console.log("[MetaMask] Sepolia Transaction Sent. Hash:", tx.hash);
-      return {
-        txHash: tx.hash,
-        simulated: false,
-        network: "Ethereum Sepolia (Testnet)"
-      };
-    } catch (err) {
-      console.error("[MetaMask Payment Error]:", err);
-      throw err;
+    const amountWei = parseEther(amountEth.toString());
+    if (balance < amountWei) {
+      throw new Error(`Insufficient Sepolia ETH! You have ${parseFloat(formatEther(balance)).toFixed(5)} ETH, but this booking requires ${amountEth} ETH. Claim free test ETH from the Faucet.`);
     }
+
+    console.log(`[MetaMask] Prompting transaction: ${amountEth} ETH for Booking ID: ${bookingId}`);
+
+    // Encode booking ID using ethers standard hexlify
+    const hexData = hexlify(toUtf8Bytes(bookingId));
+
+    // Send transaction to Escrow recipient
+    const tx = await signer.sendTransaction({
+      to: ESCROW_CONTRACT_ADDRESS,
+      value: amountWei,
+      data: hexData
+    });
+
+    console.log("[MetaMask] Sepolia Transaction broadcasted! Hash:", tx.hash);
+    console.log("[MetaMask] Waiting for 1 block confirmation on Sepolia...");
+
+    // Wait for block inclusion so the wallet balance updates on-chain!
+    const receipt = await tx.wait(1);
+    console.log("[MetaMask] Confirmed in block:", receipt.blockNumber);
+
+    return {
+      txHash: tx.hash,
+      blockNumber: receipt.blockNumber,
+      simulated: false,
+      network: "Ethereum Sepolia (Testnet)"
+    };
   }
 }

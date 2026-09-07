@@ -14,7 +14,7 @@ const SAGA_STEPS_FLOW = [
   { id: 'GenerateInvoiceTask', name: 'Generate S3 Invoice', service: 'Amazon S3 + CloudWatch', desc: 'Uploading invoice & emitting metrics' }
 ];
 
-export default function SagaVisualizerModal({ isOpen, onClose, itinerary, wallet, user, onBookingSuccess }) {
+export default function SagaVisualizerModal({ isOpen, onClose, itinerary, wallet, user, onBookingSuccess, onRefreshWallet }) {
   const [executing, setExecuting] = useState(false);
   const [simulateFailure, setSimulateFailure] = useState(false);
   const [currentStepIndex, setCurrentStepIndex] = useState(0);
@@ -43,13 +43,19 @@ export default function SagaVisualizerModal({ isOpen, onClose, itinerary, wallet
     try {
       let txHash = `0x${Array.from({ length: 64 }, () => Math.floor(Math.random() * 16).toString(16)).join('')}`;
       
-      // If MetaMask is connected and not simulating failure, send real Sepolia ETH transaction!
+      // If MetaMask is connected and not simulating failure, prompt real Sepolia ETH transaction!
       if (!simulateFailure && Web3Service.isMetaMaskInstalled() && wallet) {
         try {
           const web3Payment = await Web3Service.sendBookingPayment(itinerary.totalAmountEth, bookingId);
           txHash = web3Payment.txHash;
+          if (onRefreshWallet) {
+            await onRefreshWallet();
+          }
         } catch (walletErr) {
-          console.warn("Wallet transaction declined or aborted, falling back to simulated Sepolia hash:", walletErr.message);
+          console.error("MetaMask payment error:", walletErr);
+          setErrorMsg(walletErr.reason || walletErr.message || "MetaMask transaction was cancelled or failed");
+          setExecuting(false);
+          return; // Do NOT proceed to fake successful booking!
         }
       } else if (simulateFailure) {
         txHash = "0xFAIL_SIMULATION";
@@ -76,6 +82,9 @@ export default function SagaVisualizerModal({ isOpen, onClose, itinerary, wallet
       if (response.ok) {
         setExecutionResult(data);
         setStepHistory(data.stepHistory || []);
+        if (onRefreshWallet) {
+          await onRefreshWallet();
+        }
         if (onBookingSuccess) onBookingSuccess(data);
       } else {
         setExecutionResult(data);
@@ -261,6 +270,13 @@ export default function SagaVisualizerModal({ isOpen, onClose, itinerary, wallet
                 <FileDown size={16} /> Download S3 Invoice
               </a>
             </div>
+          </div>
+        )}
+
+        {/* Error Message display */}
+        {errorMsg && !isRolledBack && (
+          <div style={{ background: 'rgba(239, 68, 68, 0.12)', padding: '14px 16px', borderRadius: '10px', border: '1px solid rgba(239, 68, 68, 0.3)', marginBottom: '20px', color: '#f87171', fontSize: '0.85rem' }}>
+            ⚠️ <strong>Notice:</strong> {errorMsg}
           </div>
         )}
 

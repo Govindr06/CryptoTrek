@@ -106,6 +106,13 @@ export default function App() {
     handleClearCart();
   };
 
+  const refreshWalletBalance = async () => {
+    if (wallet?.address) {
+      const bal = await Web3Service.getBalance(wallet.address);
+      setWallet(prev => (prev ? { ...prev, balanceEth: bal } : null));
+    }
+  };
+
   return (
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
       
@@ -193,6 +200,7 @@ export default function App() {
           wallet={wallet}
           user={user}
           onBookingSuccess={handleBookingSuccess}
+          onRefreshWallet={refreshWalletBalance}
         />
       )}
 
