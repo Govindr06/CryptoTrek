@@ -86,10 +86,4 @@ Complete deployment templates are included in `infrastructure/`:
 - **Terraform**: Located in `infrastructure/terraform/` (`main.tf`, `route53_cloudfront_s3.tf`, `cognito.tf`, `step_functions.tf`, `rds.tf`, `dynamodb.tf`, `elasticache.tf`, `ec2_blockchain_node.tf`, `kms.tf`, `cloudwatch.tf`).
 - **AWS CloudFormation**: Located in `infrastructure/cloudformation/travel-platform-stack.yaml`.
 
----
 
-## 📚 Project Documentation
-
-- [Detailed Architecture & Design Report (Mermaid Diagrams)](docs/ARCHITECTURE.md)
-- [Saga Pattern State Machine Specification](docs/SAGA_WORKFLOW.md)
-- [Ethereum Sepolia Testnet & MetaMask Guide](docs/SEPOLIA_METAMASK_GUIDE.md)
